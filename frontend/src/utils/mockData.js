@@ -5,72 +5,88 @@ export const mockPhotos = [
     src: "https://p3-doubao-search-sign.byteimg.com/tos-cn-i-be4g95zd3a/986956881765073005~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593794&x-signature=qnXgHFv2vRbLosIgP%2BaHMUsoDmE%3D",
     location: "摩天轮",
     time: "今天 14:30",
+    date: "2025-12-18",
     area: "北区",
     price: 29.9,
-    category: "scenic"
+    category: "scenic",
+    colors: ["红色", "蓝色"]
   },
   {
     id: 2,
     src: "https://p3-doubao-search-sign.byteimg.com/tos-cn-i-be4g95zd3a/965729186175385786~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593794&x-signature=zoLwmMlxsB64mCObl1VcrRbLosIgP%2BaHMUsoDmE%3D",
     location: "花园区",
-    time: "今天 11:15",
+    time: "昨天 11:15",
+    date: "2025-12-17",
     area: "东区",
     price: 29.9,
-    category: "garden"
+    category: "garden",
+    colors: ["绿色", "黄色"]
   },
   {
     id: 3,
     src: "https://p3-doubao-search-sign.byteimg.com/tos-cn-i-be4g95zd3a/970465968286334981~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593794&x-signature=PO8iM0wjcpz819g1Fmjp0f2gmmo%3D",
     location: "过山车",
-    time: "今天 15:45",
+    time: "前天 15:45",
+    date: "2025-12-16",
     area: "西区",
     price: 29.9,
-    category: "ride"
+    category: "ride",
+    colors: ["黑色", "红色"]
   },
   {
     id: 4,
     src: "https://p3-doubao-search-sign.byteimg.com/tos-cn-i-be4g95zd3a/965729246413979675~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593794&x-signature=FqvPEAUfTZsS6bDOf363IdpyGxY%3D",
     location: "旋转木马",
     time: "今天 10:20",
+    date: "2025-12-18",
     area: "南区",
     price: 29.9,
-    category: "ride"
+    category: "ride",
+    colors: ["粉色", "白色"]
   },
   {
     id: 5,
     src: "https://p3-doubao-search-sign.byteimg.com/tos-cn-i-be4g95zd3a/891695701034008697~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593794&x-signature=X3Bu5wpIErjwhI3RZg%2FmI%2BeZtAE%3D",
     location: "过山车",
-    time: "今天 13:10",
+    time: "昨天 13:10",
+    date: "2025-12-17",
     area: "西区",
     price: 29.9,
-    category: "ride"
+    category: "ride",
+    colors: ["蓝色", "白色"]
   },
   {
     id: 6,
     src: "https://p11-doubao-search-sign.byteimg.com/labis/064dd41f32f3dd419f963096032f0a59~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593794&x-signature=JpX%2FMNkfK7hjKfbv1QGT0cimT3g%3D",
     location: "过山车",
-    time: "今天 16:25",
+    time: "前天 16:25",
+    date: "2025-12-16",
     area: "西区",
     price: 29.9,
-    category: "ride"
+    category: "ride",
+    colors: ["绿色", "黑色"]
   },
   {
     id: 7,
     src: "https://p11-doubao-search-sign.byteimg.com/labis/04556e8562e853fe330236d5904ce078~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593794&x-signature=9DmCx4d2XmlZNpRdz1jfmB%2BfiQs%3D",
     location: "过山车",
-    time: "今天 09:50",
+    time: "3天前 09:50",
+    date: "2025-12-15",
     area: "西区",
     price: 29.9,
-    category: "ride"
+    category: "ride",
+    colors: ["黄色", "红色"]
   },
   {
     id: 8,
     src: "https://p3-doubao-search-sign.byteimg.com/labis/b0588532b082a66554adcf315ea7c954~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1781593793&x-signature=%2BdlXTkl60kLfMKM9FarVVdJl99Q%3D",
     location: "儿童区",
-    time: "今天 11:30",
+    time: "昨天 11:30",
+    date: "2025-12-17",
     area: "南区",
     price: 29.9,
-    category: "kids"
+    category: "kids",
+    colors: ["紫色", "橙色"]
   }
 ];
 

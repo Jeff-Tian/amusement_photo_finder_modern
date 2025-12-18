@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, ChevronDown, Camera, MapPin, Clock, ShoppingCart, Star, Download, Info, Phone, Mail, Clock as ClockIcon, CheckCircle, X, Menu, ArrowRight } from 'lucide-react'
 import { useCart } from '../context/CartContext.jsx'
 import { mockPhotos, mockPopularProjects, mockPackages, mockReviews, mockFAQs } from '../utils/mockData.js'
+import * as tf from '@tensorflow/tfjs'
 
 const Home = () => {
   const [selectedDate, setSelectedDate] = useState('')
@@ -13,8 +14,213 @@ const Home = () => {
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertType, setAlertType] = useState('success')
+  const [uploadedSelfie, setUploadedSelfie] = useState(null)
+  const [selfiePreview, setSelfiePreview] = useState(null)
+  const [isSelfieMatching, setIsSelfieMatching] = useState(false)
   const navigate = useNavigate()
   const { addToCart } = useCart()
+
+  // 处理自拍照上传
+  const handleSelfieUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setUploadedSelfie(file)
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setSelfiePreview(event.target.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // 颜色匹配函数
+  const matchColor = (rgb) => {
+    const colorRanges = {
+      '红色': { r: [150, 255], g: [0, 100], b: [0, 100] },
+      '蓝色': { r: [0, 100], g: [0, 120], b: [150, 255] },
+      '绿色': { r: [0, 100], g: [150, 255], b: [0, 100] },
+      '黄色': { r: [200, 255], g: [200, 255], b: [0, 100] },
+      '紫色': { r: [120, 200], g: [0, 100], b: [120, 200] },
+      '粉色': { r: [200, 255], g: [0, 120], b: [120, 255] },
+      '灰色': { r: [80, 180], g: [80, 180], b: [80, 180] },
+      '黑色': { r: [0, 60], g: [0, 60], b: [0, 60] },
+      '白色': { r: [200, 255], g: [200, 255], b: [200, 255] },
+      '橙色': { r: [200, 255], g: [100, 200], b: [0, 100] }
+    }
+
+    for (const [colorName, ranges] of Object.entries(colorRanges)) {
+      if (rgb.r >= ranges.r[0] && rgb.r <= ranges.r[1] &&
+          rgb.g >= ranges.g[0] && rgb.g <= ranges.g[1] &&
+          rgb.b >= ranges.b[0] && rgb.b <= ranges.b[1]) {
+        return colorName
+      }
+    }
+
+    return null
+  }
+
+  // K-means聚类算法
+  const kmeans = (data, k, maxIterations = 100) => {
+    // 使用确定性的初始化方法
+    let centroids = []
+    
+    // 基于像素值的分布选择初始聚类中心
+    // 确保每次处理同一张照片时得到相同的结果
+    const sortedData = [...data].sort((a, b) => {
+      return (a.r + a.g + a.b) - (b.r + b.g + b.b)
+    })
+    
+    const step = Math.floor(sortedData.length / k)
+    for (let i = 0; i < k; i++) {
+      centroids.push(sortedData[i * step])
+    }
+
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      // 分配每个点到最近的聚类中心
+      const clusters = Array(k).fill().map(() => [])
+      
+      data.forEach(point => {
+        let minDistance = Infinity
+        let closestCentroidIndex = 0
+        
+        centroids.forEach((centroid, index) => {
+          const distance = Math.sqrt(
+            Math.pow(point.r - centroid.r, 2) +
+            Math.pow(point.g - centroid.g, 2) +
+            Math.pow(point.b - centroid.b, 2)
+          )
+          
+          if (distance < minDistance) {
+            minDistance = distance
+            closestCentroidIndex = index
+          }
+        })
+        
+        clusters[closestCentroidIndex].push(point)
+      })
+
+      // 更新聚类中心
+      const newCentroids = clusters.map(cluster => {
+        if (cluster.length === 0) {
+          // 如果聚类为空，随机选择一个点作为新中心
+          return data[Math.floor(Math.random() * data.length)]
+        }
+        
+        const sum = cluster.reduce((acc, point) => {
+          return { r: acc.r + point.r, g: acc.g + point.g, b: acc.b + point.b }
+        }, { r: 0, g: 0, b: 0 })
+        
+        return {
+          r: Math.round(sum.r / cluster.length),
+          g: Math.round(sum.g / cluster.length),
+          b: Math.round(sum.b / cluster.length)
+        }
+      })
+
+      // 检查是否收敛
+      const converged = centroids.every((centroid, index) => {
+        return centroid.r === newCentroids[index].r &&
+               centroid.g === newCentroids[index].g &&
+               centroid.b === newCentroids[index].b
+      })
+      
+      if (converged) break
+      
+      centroids = newCentroids
+    }
+    
+    return centroids
+  }
+
+  // 从图像中提取主要颜色
+  const extractDominantColors = async (imageElement, numColors = 3) => {
+    // 使用Canvas API确保每次都能正确处理图像数据
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    
+    // 设置canvas尺寸为缩小后的图像尺寸，提高性能
+    canvas.width = 100
+    canvas.height = 100
+    
+    // 绘制图像到canvas
+    ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height)
+    
+    // 使用TensorFlow.js处理canvas图像数据
+    const imgTensor = tf.browser.fromPixels(canvas)
+    const flattenedImg = imgTensor.reshape([-1, 3])
+    const pixelValues = await flattenedImg.array()
+
+    // 转换为RGB对象数组
+    const rgbData = pixelValues.map(pixel => ({
+      r: pixel[0],
+      g: pixel[1],
+      b: pixel[2]
+    }))
+
+    // 使用K-means聚类提取主要颜色
+    const dominantColors = kmeans(rgbData, numColors)
+
+    imgTensor.dispose()
+    flattenedImg.dispose()
+
+    return dominantColors
+  }
+
+  // 处理自拍照匹配
+  const handleSelfieMatch = async () => {
+    if (!uploadedSelfie) {
+      showAlertMessage('请先上传自拍照！', 'error')
+      return
+    }
+
+    setIsSelfieMatching(true)
+
+    try {
+      // 创建图像元素并加载自拍照
+      const img = new Image()
+      
+      // 确保每次都重新加载图像数据，避免浏览器缓存问题
+      img.src = `${selfiePreview}?t=${Date.now()}`
+      
+      // 等待图像加载完成
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+        if (img.complete) resolve()
+      })
+
+      // 提取主要颜色
+      const dominantColors = await extractDominantColors(img, 5)
+
+      // 匹配颜色
+      const matchedColors = new Set()
+      dominantColors.forEach(rgb => {
+        const matchedColor = matchColor(rgb)
+        if (matchedColor) {
+          matchedColors.add(matchedColor)
+        }
+      })
+
+      // 设置选中的颜色
+      setSelectedColors([...matchedColors])
+
+      // 自动执行搜索
+      handleSearch()
+
+      showAlertMessage(`已从自拍照中识别出 ${matchedColors.size} 种主要颜色并开始搜索`, 'success')
+    } catch (error) {
+      console.error('匹配失败:', error)
+      showAlertMessage('自拍照匹配失败，请重试！', 'error')
+    } finally {
+      setIsSelfieMatching(false)
+    }
+  }
+
+  // 清除自拍照
+  const handleClearSelfie = () => {
+    setUploadedSelfie(null)
+    setSelfiePreview(null)
+  }
 
   const colors = [
     { name: '红色', color: 'bg-red-500' },
@@ -42,11 +248,13 @@ const Home = () => {
     // 模拟搜索延迟
     setTimeout(() => {
       // 过滤搜索结果
-      const filtered = mockPhotos.filter(photo => {
-        if (selectedLocation && photo.location !== selectedLocation) return false
-        // 这里可以添加更多的搜索逻辑，比如颜色匹配等
-        return true
-      })
+    const filtered = mockPhotos.filter(photo => {
+      if (selectedDate && photo.date !== selectedDate) return false
+      if (selectedLocation && photo.location !== selectedLocation) return false
+      // 添加颜色过滤逻辑
+      if (selectedColors.length > 0 && !selectedColors.some(color => photo.colors?.includes(color))) return false
+      return true
+    })
       
       setSearchResults(filtered)
       setIsSearching(false)
@@ -185,14 +393,25 @@ const Home = () => {
               </div>
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-gray-700 text-sm font-bold mb-2 text-left">穿着颜色</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-4">
                   {colors.map((color, index) => (
                     <button
                       key={index}
-                      className={`w-8 h-8 rounded-full ${color.color} border-2 ${selectedColors.includes(color.name) ? 'border-gray-300' : 'border-white'} hover:border-gray-300 transition-all`}
+                      className={`w-10 h-10 rounded-full ${color.color} border-2 transition-all duration-300 relative flex items-center justify-center
+                        ${selectedColors.includes(color.name) 
+                          ? (color.name === '黑色' ? 'border-white shadow-md shadow-gray-500/60 scale-110 ring-2 ring-primary/30' : 'border-gray-500 shadow-md shadow-gray-500/60 scale-110 ring-2 ring-primary/30') 
+                          : 'border-white hover:shadow-sm hover:scale-105 ring-1 ring-transparent'}
+                      `}
                       onClick={() => handleColorToggle(color.name)}
                       title={color.name}
-                    />
+                    >
+                      {selectedColors.includes(color.name) && (
+                        <CheckCircle 
+                          size={12} 
+                          className={`font-bold ${selectedColors.includes(color.name) ? (color.name === '黑色' ? 'text-white' : 'text-gray-800') : ''}`} 
+                        />
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -219,10 +438,48 @@ const Home = () => {
             
             <div className="mt-6 pt-6 border-t border-gray-200">
               <p className="text-gray-700 mb-3">或者使用AI智能匹配</p>
-              <button className="bg-secondary text-white px-6 py-2 rounded-md hover:bg-secondary/90 transition-colors flex items-center space-x-2 mx-auto">
-                <span className="mr-2">🤖</span>
-                <span>上传自拍照匹配</span>
-              </button>
+              <div className="flex flex-col items-center space-y-4">
+                {!selfiePreview ? (
+                  <label className="cursor-pointer bg-secondary text-white px-6 py-2 rounded-md hover:bg-secondary/90 transition-colors flex items-center space-x-2 mx-auto">
+                    <span className="mr-2">📸</span>
+                    <span>选择自拍照</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleSelfieUpload}
+                    />
+                  </label>
+                ) : (
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="relative">
+                      <img 
+                        src={selfiePreview} 
+                        alt="自拍照预览" 
+                        className="w-32 h-32 object-cover rounded-full border-4 border-white shadow-lg"
+                      />
+                      <button 
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        onClick={handleClearSelfie}
+                        title="清除自拍照"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <button 
+                      className="bg-secondary text-white px-6 py-2 rounded-md hover:bg-secondary/90 transition-colors flex items-center space-x-2 mx-auto"
+                      onClick={handleSelfieMatch}
+                      disabled={isSelfieMatching}
+                    >
+                      {isSelfieMatching ? (
+                        <>⏳ 匹配中...</>
+                      ) : (
+                        <>🤖 开始匹配</>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           

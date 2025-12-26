@@ -6,15 +6,18 @@ import PhotoDetail from './pages/PhotoDetail.jsx'
 import Cart from './pages/Cart.jsx'
 import { CartProvider } from './context/CartContext.jsx'
 
+import { getRouterBasename } from './utils/routerBase.js'
+
 function App() {
   return (
     <CartProvider>
-      <Router>
+      <Router basename={getRouterBasename()}>
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/photo/:id" element={<PhotoDetail />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="*" element={<Home />} />
         </Routes>
       </Router>
     </CartProvider>
